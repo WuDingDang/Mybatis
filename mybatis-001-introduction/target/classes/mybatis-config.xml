@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+    <!-- 开启mybatis对标准日志的实现-->
+    <settings>
+        <setting name="logImpl" value="SLF4J"/>
+    </settings>
+    <environments default="development">
+        <environment id="development">
+            <transactionManager type="JDBC"/>
+            <dataSource type="POOLED">
+                <property name="driver" value="com.mysql.cj.jdbc.Driver"/>
+                <property name="url" value="jdbc:mysql://localhost:3306/studydb"/>
+                <property name="username" value="root"/>
+                <property name="password" value="123456"/>
+            </dataSource>
+        </environment>
+    </environments>
+
+    <mappers>
+        <!-- 执行XxxMapper.xml 文件的路径 -->
+        <!-- resource属性自动会从类的根路径下开始查找资源 -->
+        <mapper resource="CarMapper.xml"/>
+        <!-- url属性从绝对路径下开始查找资源  不建议，移植性差 -->
+        <!--<mapper url="file:///path"/> -->
+    </mappers>
+</configuration>
