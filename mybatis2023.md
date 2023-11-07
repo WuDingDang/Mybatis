@@ -431,3 +431,137 @@ selectList方法：mybatis通过这个方法就可以得知需要一个List集�
 ![image-20231106231528043](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231106231528043.png)
 
 ![image-20231106231607318](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231106231607318.png)
+
+
+
+# 3. mybatis核心配置文件
+
+## 3.1 environments标签 多环境
+
+![image-20231107204924885](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231107204924885.png)
+
+![image-20231107204939022](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231107204939022.png)
+
+
+
+### 3.1.1 transactionManager 标签
+
+![image-20231107205942003](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231107205942003.png)
+
+-  作用：配置事务管理器，指定mybatis具体使用什么方式管理事务
+
+-  type属性的两个值：
+
+  - JDBC:使用原生的JDBC代码管理事务
+                conn.setAutoCommit(false);
+                ...
+                conn.commit();
+  - MANAGED:mybatis不再负责事务管理，将事务管理交给其他JEE容器管理（如Spring)
+
+- 不区分大小写
+
+- 在mybatis中提供了一个事务管理器接口：Transaction
+
+  该接口下有两个实现类：
+
+  -  JdbcTransaction
+  - ManagedTransaction
+
+   若type="JDBC"，底层会实例化JdbcTransaction对象
+
+   若type="MANAGED"，底层会实例化ManagedTransaction对象
+
+
+
+### 3.1.2 dataSource
+
+![image-20231107211342479](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231107211342479.png)
+
+- dataSource被称为数据源
+
+- 作用:为程序提供Connection对象（给程序提供Connection对象的都叫数据源）
+
+- 数据源实际上是一套规范，JDK中有这套规范：javax.sql.DataSource
+
+- 自己也可以编写数据源组件，只要实现javax.sql.DataSource接口，实现接口中所有方法
+
+  比如可以自己写一个数据库连接池（数据库连接池是提供对象的，所以数据库连接池就是一个数据源）
+
+- 常见的数据源组件（常见的数据库连接池）：
+
+  druid，c3p0，dbcp等
+
+- type属性用来指定数据源类型，就是指定具体使用什么方式获取Connection对象
+
+  有三个值：
+
+  - UNPOOLED：不使用数据库连接池技术，每次请求后，都创建新的Connection对象
+
+  ![image-20231107213429985](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231107213429985.png)
+
+  - POOLED：使用mybatis自己实现的数据库连接池
+
+  - JNDI：集成其他第三方数据库连接池
+
+    JNDI是一套规范，大部分Web容器都实现了JNDI规范：如Tomcat，Jetty，WebLogic，WebSphere
+
+    JNDI是java命名目录接口
+  
+  
+
+连接池优点：
+- 每次获取连接都从池中拿，效率高
+
+- 连接对象的创建数量可控
+
+  
+#### 3.1.2.1 poolMaximumActiveConnections
+
+ 连接池中最多的正在使用的连接对象的数量上限，最多有多少连接可以活动，默认10
+
+
+
+#### 3.1.2.2 poolMaximumCheckoutTime
+
+超时时间的设置，默认20s
+
+
+
+#### 3.1.2.3 poolTimeToWait
+
+默认每隔20s打印日志，并尝试获取连接
+
+
+
+#### 3.1.2.4 poolMaximumIdleConnections
+
+最多空闲数量
+
+
+
+## 3.2 properties标签
+
+1.
+
+![image-20231107214746435](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231107214746435.png)
+
+
+
+  ![image-20231107214807027](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231107214807027.png)
+
+2.加properties文件
+
+![image-20231107215034435](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231107215034435.png)
+
+![image-20231107215131631](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231107215131631.png)
+
+
+
+# 4. 手写Mybatis框架
+
+略
+
+
+
+# 5.web中应用mybatis
+
