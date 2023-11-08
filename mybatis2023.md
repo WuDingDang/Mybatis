@@ -1,3 +1,5 @@
+
+
 # ORM（对象关系映射）
 
 ![image-20231105131429421](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231105131429421.png)
@@ -564,4 +566,137 @@ selectList方法：mybatis通过这个方法就可以得知需要一个List集�
 
 
 # 5.web中应用mybatis
+
+
+
+# 6.面向接口进行CRUD
+
+## 6.1 Mapper
+
+![image-20231108221121494](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231108221121494.png)
+
+## 6.2Mapper.xml
+
+![image-20231108221157213](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231108221157213.png)
+
+## 6.3 test
+
+insert
+
+```java
+@Test
+public void testInsert(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    System.out.println(sqlSession);
+    //面向接口获取接口的代理对象
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    Car car = new Car(null,"8888","丰田凯美瑞",28.8,"2011-10-19","燃油车");
+    int count = mapper.insert(car);
+    System.out.println(count);
+    sqlSession.commit();
+}
+```
+
+delete
+
+```java
+@Test
+public void testDelete(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    int count = mapper.deleteById(5L);
+    System.out.println(count);
+    sqlSession.commit();
+
+}
+```
+
+update
+
+```java
+@Test
+public void testUpdate(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    Car car = new Car(6L,"1006","宝马X6",56.9,"2023-10-13","燃油车");
+    int count = mapper.updateCar(car);
+    System.out.println(count);
+    sqlSession.commit();
+
+}
+```
+
+select
+
+```java
+@Test
+public void testSelect(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    Car car = mapper.selectById(6L);
+    System.out.println(car);
+
+}
+```
+
+selectAll
+
+```java
+@Test
+public void testSelectAll(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    List<Car> cars = mapper.selectAll();
+    for(Car car:cars){
+        System.out.println(car);
+    }
+
+}
+```
+
+
+
+# 7. 小技巧
+
+## 7.1 #{} 和 ${}
+
+#{}:底层使用PreparedStatement；特点：先进行SQL语句编译，然后给SQL语句占位符？传值，可以避免SQL注入的风险
+
+${}:底层使用Statement；特点：先进行SQL拼接，然后对SQL语句进行编译
+
+Statement存在SQL注入的风险
+
+原则：优先使用#{}
+
+
+
+## 7.2 查询所有信息排序
+
+![image-20231108223724336](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231108223724336.png)
+
+![image-20231108223801200](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231108223801200.png)
+
+![image-20231108223734951](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231108223734951.png)
+
+- 使用#{asc}
+
+  ![image-20231108223900893](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231108223900893.png)
+
+select id, car_num as carNum, brand, guide_price as guidePrice, produce_time as produceTime, car_type as carType from t_car order by produce_time 'asc'  **会有单引号报错**
+
+
+
+- 使用${asc}
+
+select id, car_num as carNum, brand, guide_price as guidePrice, produce_time as produceTime, car_type as carType from t_car order by produce_time asc   
+
+不报错
+
+**如果需要sql语句的关键字放到sql语句中，只能使用${}，因为#{}是以值的形式放到sql语句中**
+
+
+
+## 7.3 向sql中拼接表名
+
+**需要使用${}**
 
