@@ -3,17 +3,8 @@
         PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-config.dtd">
 <configuration>
-
     <properties resource="jdbc.properties"/>
-    <!-- 起别名-->
     <typeAliases>
-        <!--
-            type:指定给哪个类型起别名
-            alias:指定别名,不区分大小写；该属性可以省略，默认类的简名  如com.wdd.mybatis.pojo.Car的简名是 car/Car/cAr...
-        -->
-        <!--<typeAlias type="com.wdd.mybatis.pojo.Car" alias="Car"/>-->
-
-        <!-- 将包下的所有类自动起别名，类的简名 -->
         <package name="com.wdd.mybatis.pojo"/>
     </typeAliases>
     <environments default="development">
@@ -27,12 +18,7 @@
             </dataSource>
         </environment>
     </environments>
-
     <mappers>
-        <!--
-        <mapper resource="CarMapper.xml"/>
-        <mapper class="com.wdd.mybatis.mapper.CarMapper"/>
-        -->
         <package name="com.wdd.mybatis.mapper"/>
     </mappers>
 </configuration>

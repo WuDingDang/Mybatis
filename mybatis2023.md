@@ -700,3 +700,165 @@ select id, car_num as carNum, brand, guide_price as guidePrice, produce_time as 
 
 **需要使用${}**
 
+现实业务中，可能存在分表存储数据的情况，因为一张表存，数据量大，查询效率低。
+
+可以将数据有规律的分表存储，这样查询的效率高，因为扫描的数据量变少了
+
+日志表：
+
+![image-20231109205549642](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231109205549642.png)
+
+![image-20231109205627260](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231109205627260.png)
+
+![image-20231109205744338](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231109205744338.png)
+
+使用#{}
+
+![image-20231109205827127](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231109205827127.png)
+
+![image-20231109205907723](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231109205907723.png)
+
+报错
+
+![image-20231109205948852](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231109205948852.png)
+
+使用${}
+
+![image-20231109210020861](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231109210020861.png)
+
+![image-20231109210031569](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231109210031569.png)
+
+
+
+## 7.4 批量删除
+
+一次删除多条记录
+
+批量删除的SQL语句两种写法：
+
+- delete from t_car where id=1 or id=2 or id=3;
+
+- delete from t_car where id in(1,2,3);
+
+  ```xml
+  <delete id="deleteBatch">
+      delete from t_car where id in(${ids})
+  </delete>
+  ```
+
+
+
+## 7.5 模糊查询
+
+根据汽车品牌进行模糊查询
+
+select * from t_car where brand like '%奔驰%'
+
+
+
+错误示范：
+
+![image-20231109212644626](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231109212644626.png)
+
+![image-20231109212653704](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231109212653704.png)
+
+![image-20231109212702084](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231109212702084.png)
+
+
+
+
+
+
+
+方法一：${}![image-20231109212823484](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231109212823484.png)
+
+![image-20231109212836316](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231109212836316.png)
+
+
+
+方法二：concat函数，mysql数据库中的函数，进行字符串拼接
+
+![image-20231109213232544](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231109213232544.png)
+
+方法三：
+
+![image-20231109213441587](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231109213441587.png)
+
+
+
+## 7.6 别名机制
+
+![image-20231109214607128](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231109214607128.png)
+
+![image-20231109214658965](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231109214658965.png)
+
+
+
+## 7.7 mybatis-config.xml中的mappers标签
+
+mapper标签的属性：
+
+- resource：从类的根路径开始查找资源，配置文件需要放到类路径当中
+- url：绝对路径，移植性差
+- class：mapper接口的全限定接口名，带包名
+
+​			eg:  <mapper class="com.wdd.mybatis.mapper.CarMapper"/>
+
+​				mybatis框架会自动去com/wdd/mybatis/mapper目录下找CarMapper.xml文件
+
+​		所以使用class要保证CarMapper.xml和CarMapper接口必须在同一目录下，并且名字一致
+
+![image-20231109215823196](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231109215823196.png)
+
+![image-20231109215855657](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231109215855657.png)
+
+![image-20231109215937263](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231109215937263.png)
+
+
+
+最终写法：使用package标签
+
+![image-20231109220208757](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231109220208757.png)
+
+
+
+## 7.8 配置模板文件
+
+![image-20231109221250426](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231109221250426.png)
+
+![image-20231109221318291](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231109221318291.png)
+
+## 7.9 插入数据时获取自动生成的主键
+
+```java
+/**
+ * 插入car信息，并且使用生成的主键值
+ * @param car
+ * @return
+ */
+int insertCarUseGeneratedKeys(Car car);
+```
+
+```xml
+<!--
+useGeneratedKeys="true"  使用自动生成的主键值
+keyProperty="id"  指定主键值赋值给对象的哪个属性，这个就表示将主键值赋值给Car对象的id属性
+-->
+<insert id="insertCarUseGeneratedKeys" useGeneratedKeys="true" keyProperty="id">
+    insert into t_car values(null,#{carNum},#{brand},#{guidePrice},#{produceTime},#{carType})
+</insert>
+```
+
+
+
+
+
+# 8. mybatis参数处理（关键！）
+
+## 8.1 单个简单类型参数
+
+- byte short int long double float char
+- Byte Short Integer Long Double Float Character
+- String
+- java.util.Date
+- java.sql.Date
