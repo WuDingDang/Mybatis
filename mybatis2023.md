@@ -1,5 +1,9 @@
 
 
+
+
+
+
 # ORM（对象关系映射）
 
 ![image-20231105131429421](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231105131429421.png)
@@ -855,10 +859,663 @@ keyProperty="id"  指定主键值赋值给对象的哪个属性，这个就表�
 
 # 8. mybatis参数处理（关键！）
 
-## 8.1 单个简单类型参数
+## 8.1 单个参数
+
+单个简单类型参数
 
 - byte short int long double float char
 - Byte Short Integer Long Double Float Character
 - String
 - java.util.Date
 - java.sql.Date
+
+
+
+### 8.1.1 单个简单类型参数之Long类型
+
+```java
+/**
+ * 当接口中的方法参数只有一个（单个参数），并且参数的数据类型都是简单类型
+ * 根据 id/name/birth/sex
+ */
+List<Student> selectById(Long id);
+```
+
+```xml
+<select id="selectById" resultType="Student" parameterType="java.lang.Long">
+    select * from t_student where id = #{id}
+</select>
+```
+
+parameterType 属性的作用：告诉mybatis框架，这个方法的参数类型是什么类型
+
+mybatis框架自身带有类型自动推断机制，所以大部分情况下parameterType属性可以省略
+
+底层：
+
+​	 select * from t_student where id = ?
+
+jdbc给?传值   ps.setXxx(第几个?,传什么值)
+
+​		ps.setLong(1,1L)
+​    	ps.setString(1,"zhangsan")
+   	 ps.setInt(1,2);
+   	 ps.setDate(1,new Date())
+
+mybatis底层调用哪个setXxx(),取决与parameterType属性的值
+注意：mybatis框架内置了很多别名，参考开发手册
+
+![image-20231111122205700](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231111122205700.png)
+
+
+
+### 8.1.2 单个简单类型参数之Date类型
+
+![image-20231111123144573](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231111123144573.png)
+
+```java
+List<Student> selectByBirth(Date birth);
+```
+
+```xml
+<select id="selectByBirth" resultType="Student">
+    select * from t_student where birth = #{birth}
+</select>
+```
+
+```java
+@Test
+public void testSelectByBirth() throws Exception{
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    StudentMapper mapper = sqlSession.getMapper(StudentMapper.class);
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+    Date birth = sdf.parse("1998-10-11");
+    List<Student> students = mapper.selectByBirth(birth);
+    students.forEach(student -> System.out.println(student));
+    sqlSession.close();
+}
+```
+
+
+
+### 8.1.3 参数是Map集合
+
+![image-20231111125258245](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231111125258245.png)
+
+```java
+/**
+ * 保存学生信息，通过map参数，以下是单个参数，但参数类型不是简单类型，是map集合
+ * @param map
+ * @return
+ */
+int insertStudentByMap(Map<String,Object> map);
+```
+
+parameterType 可省略
+
+```xml
+<insert id="insertStudentByMap" parameterType="map">
+    insert into t_student(id,name,age,height,birth,sex) values (null,#{name},#{age},#{height},#{birth},#{sex})
+</insert>
+```
+
+```java
+@Test
+public void testInsertStudentByMap(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    StudentMapper mapper = sqlSession.getMapper(StudentMapper.class);
+    Map<String,Object> map = new HashMap<>();
+    map.put("name","王五");
+    map.put("age",23);
+    map.put("height",1.72);
+    map.put("birth",new Date());
+    map.put("sex",'男');
+    mapper.insertStudentByMap(map);
+    sqlSession.commit();
+    sqlSession.close();
+}
+```
+
+
+
+### 8.1.4 参数是POJO类
+
+```java
+/**
+ * 保存学生信息，通过POJO参数。Student是单个参数，但不是简单类型
+ * @param student
+ * @return
+ */
+int insertStudentByPOJO(Student student);
+```
+
+parameterType 可省略
+
+```xml
+<insert id="insertStudentByPOJO" parameterType="student">
+    insert into t_student(id,name,age,height,birth,sex) values (null,#{name},#{age},#{height},#{birth},#{sex})
+</insert>
+```
+
+```java
+@Test
+public void testInsertStudentByPOJO(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    StudentMapper mapper = sqlSession.getMapper(StudentMapper.class);
+    Student student = new Student();
+    student.setName("赵六");
+    student.setAge(18);
+    student.setHeight(1.61);
+    student.setBirth(new Date());
+    student.setSex('女');
+    mapper.insertStudentByPOJO(student);
+    sqlSession.commit();
+    sqlSession.close();
+}
+```
+
+
+
+## 8.2 多参数
+
+### 8.2.1 arg0/param1
+
+```java
+/**
+ * 根据name和sex查询学生信息
+ * 多个参数，mybatis框架底层是怎么做的？
+ *       mybatis框架会自动创建一个map集合，并且map集合是以这种方式存储的
+ *          map.put("arg0",name);
+ *          map.put("arg1",sex);
+ *          map.put("param1",name);
+ *          map.put("param2",sex);
+ * @param name
+ * @param sex
+ * @return
+ */
+List<Student> selectByNameAndSex(String name,Character sex);
+```
+
+![image-20231111160146556](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231111160146556.png)
+
+
+
+![image-20231111160036090](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231111160036090.png)
+
+
+
+低版本的mybatis中，使用#{0}，#{1}，#{2}，...
+
+高版本使用：  #{arg0},#{arg1},#{arg2},#{arg3},...
+
+或者   #{param0},#{param1},#{param2},#{param3},...
+
+```xml
+<select id="selectByNameAndSex" resultType="student">
+    <!-- select * from t_student where name =#{arg0} and sex = #{arg1}  -->
+        <!--select * from t_student where name =#{param1} and sex = #{param2}-->
+        select * from t_student where name =#{arg0} and sex = #{param2}
+</select>
+```
+
+
+
+### 8.2.2 使用Param注解
+
+```java
+/**
+ * Param注解
+ * mybatis框架底层的实现原理：
+ *  map.put("name",name);
+ *  map.put("sex",sex);
+ * @param name
+ * @param sex
+ * @return
+ */
+List<Student> selectByNameAndSex2(@Param("name") String name, @Param("sex") Character sex);
+```
+
+![image-20231111190906562](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231111190906562.png)
+
+但是可以使用param1,param2
+
+![image-20231111191032828](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231111191032828.png)
+
+```xml
+  <select id="selectByNameAndSex2" resultType="student">
+        select * from t_student where name =#{name} and sex = #{sex}
+        <!--select * from t_student where name =#{param1} and sex = #{param2}-->
+    </select>
+```
+
+```java
+@Test
+public void testSelectByNameAndSex2(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    StudentMapper mapper = sqlSession.getMapper(StudentMapper.class);
+    List<Student> students = mapper.selectByNameAndSex2("赵六", '女');
+    students.forEach(student -> System.out.println(student));
+    sqlSession.close();
+}
+```
+
+
+
+
+
+### 8.2.3 Param注解源码分析
+
+代理模式：
+
+- 代理对象
+- 代理方法
+- 目标对象
+- 目标方法
+
+![image-20231111192332513](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231111192332513.png)
+
+![image-20231111192527119](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231111192527119.png)
+
+![image-20231111193644283](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231111193644283.png)
+
+
+
+# 9. 查询专题
+
+## 9.1 返回Car
+
+```java
+/**
+ * 根据id查询car
+ * @param id
+ * @return
+ */
+Car selectById(Long id);
+```
+
+```xml
+<select id="selectById" resultType="car">
+    select
+        id,
+        car_num as carNum,
+        brand,
+        guide_price as guidePrice,
+        produce_time as produceTime,
+        car_type as carType
+    from t_car where id = #{id}
+</select>
+```
+
+```java
+@Test
+public void testSelectById(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    Car car = mapper.selectById(3L);
+    System.out.println(car);
+    sqlSession.close();
+}
+```
+
+
+
+## 9.2 返回多个Car
+
+```java
+/**
+ * 获取所有car
+ * @return
+ */
+List<Car> selectAll();
+```
+
+```xml
+<select id="selectAll" resultType="car">
+    select
+        id,
+        car_num as carNum,
+        brand,
+        guide_price as guidePrice,
+        produce_time as produceTime,
+        car_type as carType
+    from t_car
+</select>
+```
+
+```java
+@Test
+public void testSelectAll(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    List<Car> cars = mapper.selectAll();
+    cars.forEach(car -> System.out.println(car));
+    sqlSession.close();
+}
+```
+
+
+
+## 9.3 模糊查询的结果可能是多个，但是采用一个POJO对象接收
+
+**如果结果有多个，会报错**
+
+```java
+/**
+ * 根据品牌进行模糊查询
+ * 模糊查询的结果可能是多个，但是采用一个POJO对象接收
+ * @param brand
+ * @return
+ */
+Car selectByBrandLike(String brand);
+```
+
+```xml
+<select id="selectByBrandLike" resultType="car">
+    select
+        id,
+        car_num as carNum,
+        brand,
+        guide_price as guidePrice,
+        produce_time as produceTime,
+        car_type as carType
+    from t_car where brand like "%"#{brand}"%"
+</select>
+```
+
+```java
+@Test
+public void testSelectByBrandLike(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    Car car = mapper.selectByBrandLike("比亚迪");
+    System.out.println(car);
+    sqlSession.close();
+
+}
+```
+
+![image-20231111200215424](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231111200215424.png)
+
+![image-20231111200225762](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231111200225762.png)
+
+
+
+## 9.4 返回Map
+
+```java
+/**
+ * 根据id获取汽车信息，将汽车信息放到map集合中
+ * Map<String,Object>
+ *     k             v
+ *     "id"          3
+ *     "car_num"    1003
+ *     "brand"      丰田
+ *     ...
+ * @return
+ */
+Map<String,Object> selectByIdRetMap(Long id);
+```
+
+```xml
+  <!--
+    resultType="java.util.Map"的别名：map
+    -->
+    <select id="selectByIdRetMap" resultType="map">
+        select
+            id,
+            car_num as carNum,
+            brand,
+            guide_price as guidePrice,
+            produce_time as produceTime,
+            car_type as carType
+        from t_car where id = #{id}
+    </select>
+```
+
+```java
+@Test
+public void testSelectByIdRetMap(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    Map<String, Object> car = mapper.selectByIdRetMap(3L);
+    System.out.println(car);
+    sqlSession.close();
+}
+```
+
+![image-20231111201148360](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231111201148360.png)
+
+
+
+## 9.5 返回多个Map
+
+```java
+/**
+ * 查询所有car，返回一个放Map集合的List集合
+ * @return
+ */
+List<Map<String,Object>> selectAllRetListMap();
+```
+
+```xml
+<select id="selectAllRetListMap" resultType="map">
+    select * from t_car
+</select>
+```
+
+```java
+@Test
+public void testSelectAllRetListMap(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    List<Map<String, Object>> maps = mapper.selectAllRetListMap();
+    maps.forEach(map -> System.out.println(map));
+    sqlSession.close();
+}
+```
+
+![image-20231111201814114](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231111201814114.png)
+
+
+
+## 9.5 返回Map<String,Map>
+
+![image-20231111202032534](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231111202032534.png)
+
+```java
+/**
+ * 查询所有Car，返回一个大Map
+ * Map集合的key是每条记录的主键值
+ * Map集合的value是每条记录
+ * @return
+ */
+@MapKey("id")    //将查询结果的id值作为整个大Map集合的key
+Map<Long,Map<String,Object>> selectAllRetMap();
+```
+
+```xml
+<select id="selectAllRetMap" resultType="map">
+    select * from t_car
+</select>
+```
+
+```java
+@Test
+public void testSelectAllRetMap(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    Map<Long, Map<String, Object>> map = mapper.selectAllRetMap();
+    System.out.println(map);
+    sqlSession.close();
+}
+```
+
+结果：
+
+{
+
+​	16={car_num=8888, id=16, guide_price=28.80, produce_time=2011-10-19, brand=丰田凯美瑞, car_type=燃油车}, 
+
+​	17={car_num=1004, id=17, guide_price=89.30, produce_time=2022-4-23, brand=奔驰s300, car_type=燃油车}, 
+
+​	3={car_num=1003, id=3, guide_price=30.00, produce_time=2000-01-12, brand=丰田, car_type=燃油车}, 
+
+​	4={car_num=9999, id=4, guide_price=30.30, produce_time=2021-12-09, brand=丰田2.0, car_type=燃油车},
+
+​    6={car_num=1006, id=6, guide_price=56.90, produce_time=2023-10-13, brand=宝马X6, car_type=燃油车},
+
+​    12={car_num=1111, id=12, guide_price=10.00, produce_time=2011-11-3, brand=比亚迪, car_type=电车}, 
+
+​    13={car_num=3333, id=13, guide_price=30.00, produce_time=2022-1-12, brand=比亚迪秦, car_type=新能源}, 
+
+​    15={car_num=2222, id=15, guide_price=110.00, produce_time=2023-11-2, brand= 小鹏, car_type=燃油车}
+
+}
+
+
+
+## 9.6 resultMap结果映射
+
+查询结果列名和java对象的属性名对应不上解决
+
+- 方法一：as 给列起别名
+- 方法二：使用resultMap进行结果映射
+- 方法三：是否开启驼峰命名自动映射（配置settings）
+
+
+
+### 9.6.1 使用resultMap标签进行结果映射
+
+```java
+/**
+ * 查询所有car，使用resultMap标签进行结果映射
+ * @return
+ */
+List<Car> selectAllByReultMap();
+```
+
+```xml
+   <!--
+        定义一个结果映射，在这个结果映射当中指定数据库表的字段名和Java类的属性名的对应关系
+        type属性：用来指定POJO类的类名
+        id属性：指定resultMap的唯一标识，这个id要在select标签中使用
+    -->
+    <resultMap id="carResultMap" type="car">
+        <!-- 如果数据库表中有主键，建议配置一个id标签，虽然不是必须的，但是可以让mybatis提高效率 -->
+        <id property="id" column="id"/>
+        <!--
+            property后面填写POJO类的属性名
+            column后面填写数据库表的字段名
+         -->
+        <result property="carNum" column="car_num"/>
+        <!--  property和column是一样的，可以省略 -->
+    <!--<result property="brand" column="brand"/>-->
+        <result property="guidePrice" column="guide_price"/>
+        <result property="produceTime" column="produce_time"/>
+        <result property="carType" column="car_type"/>
+    </resultMap>
+<!-- resultMap标签用来指定使用哪个结果映射，resultMap后面的值是resultMap的id -->
+    <select id="selectAllByReultMap" resultMap="carResultMap">
+        select * from t_car
+    </select>
+```
+
+```java
+@Test
+public void testSelectAllByReultMap(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    List<Car> cars = mapper.selectAllByReultMap();
+    cars.forEach(car -> System.out.println(car));
+    sqlSession.close();
+}
+```
+
+![image-20231111205535653](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231111205535653.png)
+
+
+
+### 9.6.2 是否开启驼峰命名自动映射
+
+前提：属性名遵循Java命名规范，数据库表列名遵循SQL命名规范
+
+Java命名规范：首字母小写，后面每个单词首字母大写，遵循驼峰命名方式
+
+SQL命名规范：全部小写，单词间用下划线分割
+
+![image-20231111205808412](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231111205808412.png)
+
+![image-20231111205837844](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231111205837844.png)
+
+![image-20231111205918971](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231111205918971.png)
+
+```xml
+<!-- mybatis的全局设置 -->
+<settings>
+    <setting name="mapUnderscoreToCamelCase" value="true"/>
+</settings>
+```
+
+```java
+/**
+ * 查询所有car，启用驼峰命名自动映射机制
+ * @return
+ */
+List<Car> selectByMapUnderscoreToCamelCase();
+```
+
+```xml
+<select id="selectByMapUnderscoreToCamelCase" resultType="car">
+    select * from t_car
+</select>
+```
+
+```java
+@Test
+public void testSelectByMapUnderscoreToCamelCase(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    List<Car> cars = mapper.selectByMapUnderscoreToCamelCase();
+    cars.forEach(car -> System.out.println(car));
+    sqlSession.close();
+}
+```
+
+
+
+## 9.7 返回总记录条数 Long
+
+```java
+/**
+ * 获取car的总记录条数
+ * @return
+ */
+Long selectTotal();
+```
+
+```xml
+<select id="selectTotal" resultType="long">
+    select count(*) from t_car
+</select>
+```
+
+```java
+@Test
+public void testSelectTotal(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    Long total = mapper.selectTotal();
+    System.out.println(total);
+}
+```
+
+
+
+# 10. 动态SQL
+
+![image-20231111212000776](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231111212000776.png)
+
+
+
+## 10.1 if标签
+
