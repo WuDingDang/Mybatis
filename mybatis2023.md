@@ -2,8 +2,6 @@
 
 
 
-
-
 # ORM（对象关系映射）
 
 ![image-20231105131429421](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231105131429421.png)
@@ -1518,4 +1516,550 @@ public void testSelectTotal(){
 
 
 ## 10.1 if标签
+
+```java
+/**
+ * 多条件查询
+ * @param brand
+ * @param guidePrice
+ * @param carType
+ * @return
+ */
+List<Car> selectByMultiCondition(@Param("brand") String brand, @Param("guidePrice") Double guidePrice,@Param("carType") String carType);
+```
+
+```xml
+<select id="selectByMultiCondition" resultType="car">
+    select * from t_car where 1=1
+    <!--
+        1.if标签中test属性是必须的
+        2.if标签中test属性的值是false或者true
+        3.如果test是true，则if标签中的sql语句就会拼接，反之，则不会拼接
+        4.test属性中可以使用的是：
+            当使用@Param注解，test中要出现的是@Param注解指定的参数名
+            当没有使用@Param注解，test中要出现的是：param1,param2,param3/arg0,arg1,arg2
+            当使用了POJO，那么test中出现的是类的属性名
+        5.在mybatis的动态SQL中，不能使用&&，只能使用and
+     -->
+    <if test="brand != null and brand != ''">
+        and brand like "%"#{brand}"%"
+    </if>
+    <if test="guidePrice != null and guidePrice != ''">
+        and guide_price > #{guidePrice}
+    </if>
+    <if test="carType != null and carType != ''">
+        and car_type = #{carType}
+    </if>
+</select>
+```
+
+![image-20231112135518064](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231112135518064.png)
+
+```java
+@Test
+public void testSelectByMultiCondition(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    List<Car> cars = mapper.selectByMultiCondition("比亚迪", 20.0, "新能源");
+    cars.forEach(car -> System.out.println(car));
+    sqlSession.close();
+}
+```
+
+![image-20231112135602239](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231112135602239.png)
+
+
+
+## 10.2 where标签
+
+作用：让where子句更加动态智能
+
+- 所有条件都为空时，where标签不会生成where子句
+- 自动去除某些条件**前面**多余的and或or
+
+```java
+/**
+ * 使用where标签，让where子句更加智能
+ * @param brand
+ * @param guidePrice
+ * @param carType
+ * @return
+ */
+List<Car> selectByMultiConditionWithWhere(@Param("brand") String brand, @Param("guidePrice") Double guidePrice,@Param("carType") String carType);
+```
+
+```xml
+<select id="selectByMultiConditionWithWhere" resultType="car">
+    select * from t_car
+    <!--
+        where标签是专门负责where子句动态生成的
+    -->
+    <where>
+        <if test="brand != null and brand != ''">
+             brand like "%"#{brand}"%"
+        </if>
+        <if test="guidePrice != null and guidePrice != ''">
+            and guide_price > #{guidePrice}
+        </if>
+        <if test="carType != null and carType != ''">
+            and car_type = #{carType}
+        </if>
+    </where>
+</select>
+```
+
+```java
+@Test
+public void testSelectByMultiConditionWithWhere(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    //条件都不为空
+    //List<Car> cars = mapper.selectByMultiConditionWithWhere("比亚迪", 20.0, "新能源");
+    //条件都是空
+    //List<Car> cars = mapper.selectByMultiConditionWithWhere("", null, "");
+    //第一个条件为空
+    List<Car> cars = mapper.selectByMultiConditionWithWhere("", 20.0, "新能源");
+    cars.forEach(car -> System.out.println(car));
+    sqlSession.close();
+}
+```
+
+条件都不为空
+
+![image-20231112140933847](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231112140933847.png)
+
+条件都是空
+
+![image-20231112140847933](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231112140847933.png)第一个条件为空
+
+![image-20231112140909082](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231112140909082.png)
+
+
+
+## 10.3 trim标签
+
+```java
+/**
+ * 使用trim标签
+ * @param brand
+ * @param guidePrice
+ * @param carType
+ * @return
+ */
+List<Car> selectByMultiConditionWithTrim(@Param("brand") String brand, @Param("guidePrice") Double guidePrice,@Param("carType") String carType);
+```
+
+```xml
+<select id="selectByMultiConditionWithTrim" resultType="car">
+    select * from t_car
+    <!--
+        prefix 加前缀
+        suffix  加后缀
+        prefixOverrides  删除前缀
+        suffixOverrides  删除后缀
+    -->
+    <!--
+   prefix="where" : 在trim标签的所有内容前面加where
+   suffixOverrides="and|or"：把trim标签中内容的后缀and或者or去掉
+   -->
+    <trim  prefix="where" suffixOverrides="and|or">
+
+        <if test="brand != null and brand != ''">
+            brand like "%"#{brand}"%" and
+        </if>
+        <if test="guidePrice != null and guidePrice != ''">
+            guide_price > #{guidePrice} and
+        </if>
+        <if test="carType != null and carType != ''">
+            car_type = #{carType}
+        </if>
+    </trim>
+</select>
+```
+
+```java
+@Test
+public void testSelectByMultiConditionWithTrim(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    List<Car> cars = mapper.selectByMultiConditionWithTrim("比亚迪", null, "");
+    cars.forEach(car -> System.out.println(car));
+    sqlSession.close();
+}
+```
+
+![image-20231112161454444](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231112161454444.png)
+
+![image-20231112161525622](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231112161525622.png)
+
+
+
+## 10.4 set标签
+
+ ### 10.4.1 普通update
+
+```java
+/**
+ * 更新car
+ * @param car
+ * @return
+ */
+int updateById(Car car);
+```
+
+```xml
+<update id="updateById">
+    update t_car set
+        car_num = #{carNum},
+        brand = #{brand},
+        guide_price = #{guidePrice},
+        produce_time = #{produceTime},
+        car_type = #{carType}
+    where id = #{id}
+</update>
+```
+
+```java
+@Test
+public void testUpdateById(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    Car car = new Car(6L,null,"比亚迪汉",null,null,"电车");
+    mapper.updateById(car);
+    sqlSession.commit();
+    sqlSession.close();
+}
+```
+
+![image-20231112163605137](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231112163605137.png)
+
+设空值的也会更新
+
+![image-20231112162945187](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231112162945187.png)
+
+
+
+### 10.4.2 使用set标签更新
+
+只更新提交的数据是不为空的字段，会去掉最后多余的 “，”
+
+```java
+/**
+ * 使用set标签更新car
+ * @param car
+ * @return
+ */
+int updateBySet(Car car);
+```
+
+```xml
+<update id="updateBySet">
+    update t_car
+    <set>
+        <if test="carNum != null and carNum != ''">car_num = #{carNum},</if>
+        <if test="brand != null and brand != ''">brand = #{brand},</if>
+        <if test="guidePrice != null and guidePrice != ''">guide_price = #{guidePrice},</if>
+        <if test="produceTime != null and produceTime != ''">produce_time = #{produceTime},</if>
+        <if test="carType != null and carType != ''">car_type = #{carType},</if>
+    </set>
+    where id = #{id}
+</update>
+```
+
+```java
+@Test
+public void testUpdateBySet(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    Car car = new Car(6L,null,"比亚迪byd",null,null,"电车");
+    mapper.updateBySet(car);
+    sqlSession.commit();
+    sqlSession.close();
+}
+```
+
+![image-20231112163641904](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231112163641904.png)
+
+
+
+## 10.5 choose when otherwise
+
+三个标签通常放一起使用
+
+只有一个分支会被选择
+
+```java
+/**
+ * 使用choose when otherwise 标签
+ * @param brand
+ * @param guidePrice
+ * @param carType
+ * @return
+ */
+List<Car> selectByChoose(@Param("brand") String brand,@Param("guidePrice")Double guidePrice,@Param("carType")String carType);
+```
+
+```xml
+<select id="selectByChoose" resultType="car">
+    select * from t_car
+    <where>
+        <choose>
+            <when test="brand != null and brand != ''">
+                brand like "%"#{brand}"%"
+            </when>
+            <when test="guidePrice != null and guidePrice != ''">
+                guide_price > #{guidePrice}
+            </when>
+            <otherwise>
+                car_type = #{carType}
+            </otherwise>
+        </choose>
+    </where>
+</select>
+```
+
+```java
+@Test
+public void testSelectByChoose(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    //条件都不为空
+    List<Car> cars = mapper.selectByChoose("比亚迪",1.0,"新能源");
+    cars.forEach(car -> System.out.println(car));
+    sqlSession.close();
+}
+```
+
+- 条件都不为空
+
+​		只选择第一个条件
+
+![image-20231112165241138](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231112165241138.png)
+
+- 第一个条件为空
+
+![image-20231112165351412](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231112165351412.png)
+
+- 全为空
+
+  选择otherwise中的
+
+![image-20231112165501503](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231112165501503.png)
+
+
+
+## 10.6 foreach标签
+
+foreach标签属性：
+
+- collection：指定数组或集合
+
+   如果不加注解mybatis底层：map.put("array",数组); / map.put("arg0",数组);
+
+- item：数组或集合中的元素
+
+- separator：循环之间的分隔符
+
+- open:foreach循环拼接的所有sql语句的最前面以什么开始
+
+- close:foreach循环拼接的所有sql语句的最后面以什么开始
+
+### 10.6.1 批量删除
+
+```java
+/**
+ * 批量删除 foreach标签
+ * @param ids
+ * @return
+ */
+int deleteByIds(@Param("ids") Long[] ids);
+```
+
+```xml
+<delete id="deleteByIds">
+    <!-- delete from t_car where id in(1,2,3,4) -->
+    <!-- 方法一：
+         delete from t_car where id in(
+         <foreach collection="ids" item="id" separator=",">
+             #{id}
+         </foreach>
+         )
+     -->
+    <!-- 方法二-->
+    delete from t_car where id in
+    <foreach collection="ids" item="id" separator="," open="(" close=")">
+        #{id}
+    </foreach>
+ </delete>
+```
+
+```java
+@Test
+public void testDeleteByIds(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    Long[] ids = {15L,16L,17L};
+    int count = mapper.deleteByIds(ids);
+    System.out.println(count);
+    sqlSession.commit();
+    sqlSession.close();
+}
+```
+
+![image-20231112171601009](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231112171601009.png)
+
+
+
+```java
+/**
+ * 根据id批量删除，使用or
+ * @param ids
+ * @return
+ */
+int deleteByIds2(@Param("ids") Long[] ids);
+```
+
+```xml
+<delete id="deleteByIds2">
+    delete from t_car where
+    <foreach collection="ids" item="id" separator="or">
+        id = #{id}
+    </foreach>
+</delete>
+```
+
+```java
+@Test
+public void testDeleteByIds2(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    Long[] ids = {22L,23L,24L};
+    mapper.deleteByIds2(ids);
+    sqlSession.commit();
+    sqlSession.close();
+}
+```
+
+![image-20231112213716663](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231112213716663.png)
+
+### 10.6.2 批量插入
+
+```java
+/**
+ * 批量插入
+ * @param cars
+ * @return
+ */
+int insertBatch(@Param("cars") List<Car> cars);
+```
+
+```xml
+<insert id="insertBatch">
+    insert into t_car values
+    <foreach collection="cars" item="car" separator=",">
+        (null,#{car.carNum},#{car.brand},#{car.guidePrice},#{car.produceTime},#{car.carType})
+    </foreach>
+</insert>
+```
+
+```java
+@Test
+public void testInsertBatch(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    Car car1 = new Car(null,"1001","劳斯莱斯1",802.8,"2011-10-09","燃油车");
+    Car car2 = new Car(null,"1002","劳斯莱斯2",766.5,"2021-11-29","燃油车");
+    Car car3 = new Car(null,"1004","劳斯莱斯3",500.2,"2015-08-23","燃油车");
+    List<Car> cars = new ArrayList<>();
+    cars.add(car1);
+    cars.add(car2);
+    cars.add(car3);
+    mapper.insertBatch(cars);
+}
+```
+
+![image-20231112213038006](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231112213038006.png)
+
+
+
+## 10.7 sql标签和include标签
+
+sql标签：声明sql片段
+
+include标签：将声明的sql片段包含到某个sql语句中
+
+作用：代码复用，易维护
+
+![image-20231112214601182](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231112214601182.png)
+
+
+
+# 11. mybatis高级映射及延迟加载
+
+## 11.1准备
+
+![image-20231112220645644](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231112220645644.png)
+
+![image-20231112220654373](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231112220654373.png)
+
+![image-20231112220219512](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231112220219512.png)
+
+
+
+多对一：多个学生对应一个班级
+
+多对一映射实体类的设计
+
+![image-20231112221231422](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231112221231422.png)
+
+![image-20231112221349261](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231112221349261.png)
+
+
+
+## 11.2 多对一映射的方式
+
+### 11.2.1 级联属性映射
+
+```java
+/**
+ * 根据id获取学生信息，同时获取学生关联的班级信息
+ * @param id
+ * @return
+ */
+Student selectById(Integer id);
+```
+
+```xml
+<resultMap id="studentResultMap" type="student">
+    <id property="sid" column="sid"/>
+    <result property="sname" column="sname"/>
+    <result property="clazz.cid" column="cid"/>
+    <result property="clazz.cname" column="cname"/>
+</resultMap>
+<!-- 多对一映射的第一种方式：一条SQL语句，级联属性映射 -->
+<select id="selectById" resultMap="studentResultMap">
+    select
+        s.sid,s.sname,c.cid,c.cname
+    from t_stu s left join t_clazz c on s.cid = c.cid
+    where s.sid = #{sid}
+</select>
+```
+
+```java
+@Test
+public void testSelectById(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    StudentMapper mapper = sqlSession.getMapper(StudentMapper.class);
+    Student student = mapper.selectById(1);
+    System.out.println(student.getSid());
+    System.out.println(student.getSname());
+    System.out.println(student.getClazz().getCid());
+    System.out.println(student.getClazz().getCname());
+    sqlSession.close();
+}
+```
+
+
+
+### 11.2.2 association
 

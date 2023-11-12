@@ -14,6 +14,7 @@
         <module name="mybatis-005-crud2" />
         <module name="mybatis-001-introduction" />
         <module name="mybatis-002-crud" />
+        <module name="mybatis-010-advanced-mapping" />
         <module name="mybatis-003-configuration" />
       </profile>
     </annotationProcessing>
