@@ -3,5 +3,39 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.wdd.mybatis.mapper.ClazzMapper">
+    <!-- 分步查询第二步：根据cid获取班级信息 -->
+    <select id="selectByIdStep2" resultType="clazz">
+        select cid,cname from t_clazz where cid = #{cid}
+    </select>
+
+    <resultMap id="clazzResultMap" type="clazz">
+        <id property="cid" column="cid"/>
+        <result property="cname" column="cname"/>
+        <!--
+        ofType:指定集合中元素类型
+        -->
+        <collection property="stus" ofType="student">
+            <id property="sid" column="sid"/>
+            <result property="sname" column="sname"/>
+        </collection>
+    </resultMap>
+    <select id="selectByCollection" resultMap="clazzResultMap">
+        select c.cid,c.cname,s.sid,s.sname
+        from t_clazz c left join t_stu s
+        on c.cid = s.cid
+        where c.cid = #{cid}
+    </select>
+
+    <!-- 分步查询第一步：根据班级的cid查询班级信息 -->
+    <resultMap id="clazzResultMapStep" type="clazz">
+        <id property="cid" column="cid"/>
+        <result property="cname" column="cname"/>
+        <collection property="stus"
+                    select="com.wdd.mybatis.mapper.StudentMapper.selectByCidStep2"
+                    column="cid"/>
+    </resultMap>
+    <select id="selectByStep1" resultMap="clazzResultMapStep">
+        select cid,cname from t_clazz where cid = #{cid}
+    </select>
 
 </mapper>

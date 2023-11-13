@@ -1,7 +1,5 @@
 
 
-
-
 # ORM（对象关系映射）
 
 ![image-20231105131429421](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231105131429421.png)
@@ -2063,3 +2061,283 @@ public void testSelectById(){
 
 ### 11.2.2 association
 
+```java
+/**
+ * 一条SQL语句，association
+ * @param id
+ * @return
+ */
+Student selectByIdAssociation(Integer id);
+```
+
+```xml
+<resultMap id="studentResultMapAssociation" type="student">
+    <id property="sid" column="sid"/>
+    <result property="sname" column="sname"/>
+    <!--
+   association : 一个Student对象关联一个Clazz对象
+        property：提供要映射的POJO类的属性名
+        javaType：用来指定要映射的java类型
+   -->
+    <association property="clazz" javaType="clazz">
+        <id property="cid" column="cid"/>
+        <result property="cname" column="cname"/>
+    </association>
+</resultMap>
+<select id="selectByIdAssociation" resultMap="studentResultMapAssociation">
+    select
+        s.sid,s.sname,c.cid,c.cname
+    from
+        t_stu s left join t_clazz c on s.cid = c.cid
+    where s.sid = #{sid}
+</select>
+```
+
+```java
+@Test
+public void testStudentResultMapAssociation(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    StudentMapper mapper = sqlSession.getMapper(StudentMapper.class);
+    Student student = mapper.selectByIdAssociation(1);
+    System.out.println(student);
+    sqlSession.close();
+}
+```
+
+
+
+### 11.2.3 分步查询
+
+两条SQL语句
+
+优点：
+
+- 可复用
+- 支持懒加载（延迟加载）
+
+
+
+StudentMapper.java
+
+```java
+/**
+ * 分步查询第一步：根据学生id查询学生信息
+ * @param id
+ * @return
+ */
+Student selectByIdStep1(Integer id);
+```
+
+StudentMapper.xml
+
+```xml
+<!--
+两条SQL语句，完成多对一的分步查询
+-->
+<resultMap id="studentResultMapByStep" type="student">
+    <id property="sid" column="sid"/>
+    <result property="sname" column="sname"/>
+    <association property="clazz"
+                     select="com.wdd.mybatis.mapper.ClazzMapper.selectByIdStep2"
+                     fetchType="lazy"
+                     column="cid"/>
+</resultMap>
+<!--第一步：根据学生id查询学生所有信息 ，信息中含有班级的cid-->
+<select id="selectByIdStep1" resultMap="studentResultMapByStep">
+    select sid,sname,cid from t_stu where sid = #{sid}
+</select>
+```
+
+ClazzMapper.java
+
+```java
+/**
+ * 分步查询第二步：根据id获取班级信息
+ * @param id
+ * @return
+ */
+Clazz selectByIdStep2(Integer id);
+```
+
+ClazzMapper.xml
+
+```xml
+<!-- 分步查询第二步：根据cid获取班级信息 -->
+<select id="selectByIdStep2" resultType="clazz">
+    select cid,cname from t_clazz where cid = #{cid}
+</select>
+```
+
+```java
+@Test
+public void testSelectByIdStep1(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    StudentMapper mapper = sqlSession.getMapper(StudentMapper.class);
+    Student student = mapper.selectByIdStep1(1);
+    System.out.println(student);
+    sqlSession.close();
+}
+```
+
+![image-20231113210756720](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231113210756720.png)
+
+
+
+### 11.2.4 延迟加载（懒加载）
+
+核心原理：用的时候再执行查询语句，不用的时候不查询
+
+作用：提高性能
+
+mybatis中如何开启延迟加载？
+
+​	**association标签上添加fetchType="lazy"**，局部设置，只对当前association关联的sql语句起作用
+
+默认不开启延迟加载，需要设置
+
+
+
+全局设置
+
+![image-20231113211703325](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231113211703325.png)
+
+带有分步的都会延迟加载
+
+![image-20231113211812866](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231113211812866.png)
+
+
+
+
+
+## 11.3 一对多
+
+![image-20231113212441055](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231113212441055.png)
+
+![image-20231113212629142](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231113212629142.png)
+
+ 
+
+### 11.3.1 collection
+
+```java
+/**
+ * 根据班级编号查询班级信息
+ * @param id
+ * @return
+ */
+Clazz selectByCollection(Integer id);
+```
+
+```xml
+<resultMap id="clazzResultMap" type="clazz">
+    <id property="cid" column="cid"/>
+    <result property="cname" column="cname"/>
+    <!--
+    ofType:指定集合中元素类型
+    -->
+    <collection property="stus" ofType="student">
+        <id property="sid" column="sid"/>
+        <result property="sname" column="sname"/>
+    </collection>
+</resultMap>
+<select id="selectByCollection" resultMap="clazzResultMap">
+    select c.cid,c.cname,s.sid,s.sname
+    from t_clazz c left join t_stu s
+    on c.cid = s.cid
+    where c.cid = #{cid}
+</select>
+```
+
+```java
+@Test
+public void testSelectByCollection(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    ClazzMapper mapper = sqlSession.getMapper(ClazzMapper.class);
+    Clazz clazz = mapper.selectByCollection(1000);
+    System.out.println(clazz);
+    sqlSession.close();
+}
+```
+
+![image-20231113213743559](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231113213743559.png)
+
+
+
+### 11.3.2 分步查询
+
+ClassMapper.java
+
+```java
+/**
+ * 分步查询：第一步：根据班级编号获取班级信息
+ * @param id
+ * @return
+ */
+Clazz selectByStep1(Integer id);
+```
+
+ClassMapper.xml
+
+```xml
+<!-- 分步查询第一步：根据班级的cid查询班级信息 -->
+<resultMap id="clazzResultMapStep" type="clazz">
+    <id property="cid" column="cid"/>
+    <result property="cname" column="cname"/>
+    <collection property="stus"
+                select="com.wdd.mybatis.mapper.StudentMapper.selectByCidStep2"
+                column="cid"/>
+</resultMap>
+<select id="selectByStep1" resultMap="clazzResultMapStep">
+    select cid,cname from t_clazz where cid = #{cid}
+</select>
+```
+
+StudentMapper.java
+
+```java
+/**
+ * 分步查询第二步：根据班级编号查学生信息
+ * @param cid
+ * @return
+ */
+List<Student> selectByCidStep2(Integer cid);
+```
+
+StudentMapper.xml
+
+```xml
+<select id="selectByCidStep2" resultType="student">
+    select * from t_stu where cid = #{cid}
+</select>
+```
+
+```java
+@Test
+public void testSelectByStep1(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    ClazzMapper mapper = sqlSession.getMapper(ClazzMapper.class);
+    Clazz clazz = mapper.selectByStep1(1000);
+    System.out.println(clazz);
+    sqlSession.close();
+}
+```
+
+![image-20231113215346275](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231113215346275.png)
+
+![](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231113215255394.png)
+
+
+
+
+
+# 12. mybatis缓存
+
+![image-20231113220110281](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231113220110281.png)
+
+![image-20231113220144046](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231113220144046.png)
+
+## 12.1 一级缓存
+
+一级缓存默认开启，无需配置
+
+原理：只要使用同一个SqlSession对象执行同一条SQL语句，就会走缓存

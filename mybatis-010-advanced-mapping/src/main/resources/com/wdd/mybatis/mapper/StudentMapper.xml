@@ -13,8 +13,50 @@
     <select id="selectById" resultMap="studentResultMap">
         select
             s.sid,s.sname,c.cid,c.cname
-        from t_stu s left join t_clazz c on s.cid = c.cid
+        from
+            t_stu s left join t_clazz c on s.cid = c.cid
         where s.sid = #{sid}
+    </select>
+
+    <resultMap id="studentResultMapAssociation" type="student">
+        <id property="sid" column="sid"/>
+        <result property="sname" column="sname"/>
+        <!--
+       association : 一个Student对象关联一个Clazz对象
+            property：提供要映射的POJO类的属性名
+            javaType：用来指定要映射的java类型
+       -->
+        <association property="clazz" javaType="clazz">
+            <id property="cid" column="cid"/>
+            <result property="cname" column="cname"/>
+        </association>
+    </resultMap>
+    <select id="selectByIdAssociation" resultMap="studentResultMapAssociation">
+        select
+            s.sid,s.sname,c.cid,c.cname
+        from
+            t_stu s left join t_clazz c on s.cid = c.cid
+        where s.sid = #{sid}
+    </select>
+
+    <!--
+    两条SQL语句，完成多对一的分步查询
+    -->
+    <resultMap id="studentResultMapByStep" type="student">
+        <id property="sid" column="sid"/>
+        <result property="sname" column="sname"/>
+        <association property="clazz"
+                     select="com.wdd.mybatis.mapper.ClazzMapper.selectByIdStep2"
+                     fetchType="lazy"
+                     column="cid"/>
+    </resultMap>
+    <!--第一步：根据学生id查询学生所有信息 ，信息中含有班级的cid-->
+    <select id="selectByIdStep1" resultMap="studentResultMapByStep">
+        select sid,sname,cid from t_stu where sid = #{sid}
+    </select>
+
+    <select id="selectByCidStep2" resultType="student">
+        select * from t_stu where cid = #{cid}
     </select>
 
 </mapper>

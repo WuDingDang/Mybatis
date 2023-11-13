@@ -1,15 +1,27 @@
 package com.wdd.mybatis.pojo;
 
+import java.util.List;
+
 /**
  * 班级信息
  */
 public class Clazz {
     private Integer cid;
     private String cname;
+    private List<Student> stus;
 
-    public Clazz(Integer cid, String cname) {
+    public List<Student> getStus() {
+        return stus;
+    }
+
+    public void setStus(List<Student> stus) {
+        this.stus = stus;
+    }
+
+    public Clazz(Integer cid, String cname, List<Student> stus) {
         this.cid = cid;
         this.cname = cname;
+        this.stus = stus;
     }
 
     public Clazz() {
@@ -36,6 +48,7 @@ public class Clazz {
         return "Clazz{" +
                 "cid=" + cid +
                 ", cname='" + cname + '\'' +
+                ", stus=" + stus +
                 '}';
     }
 }
