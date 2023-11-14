@@ -2341,3 +2341,155 @@ public void testSelectByStep1(){
 一级缓存默认开启，无需配置
 
 原理：只要使用同一个SqlSession对象执行同一条SQL语句，就会走缓存
+
+```java
+/**
+ * 根据id获取car信息
+ * @param id
+ * @return
+ */
+Car selectById(Long id);
+```
+
+```xml
+<select id="selectById" resultType="car">
+    select * from t_car where id = #{id};
+</select>
+```
+
+在同一个SqlSession对象中执行两次相同的sql语句
+
+```java
+@Test
+public void testSelectById(){
+    SqlSession sqlSession = SqlSessionUtil.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+    Car car1 = mapper.selectById(3L);
+    System.out.println(car1);
+    Car car2 = mapper.selectById(3L);
+    System.out.println(car2);
+    sqlSession.close();
+}
+```
+
+![image-20231114204540833](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231114204540833.png)
+
+在不同的SqlSession对象中执行两次相同的sql语句
+
+```java
+@Test
+public void testSelectById() throws Exception{
+    //如果要获取不同的SqlSession对象，不能用工具类
+    //SqlSession sqlSession = SqlSessionUtil.openSession();
+    SqlSessionFactory sqlSessionFactory = new SqlSessionFactoryBuilder().build(Resources.getResourceAsStream("mybatis-config.xml"));
+    SqlSession sqlSession1 = sqlSessionFactory.openSession();
+    SqlSession sqlSession2 = sqlSessionFactory.openSession();
+    CarMapper mapper1 = sqlSession1.getMapper(CarMapper.class);
+    Car car1 = mapper1.selectById(3L);
+    System.out.println(car1);
+    CarMapper mapper2 = sqlSession2.getMapper(CarMapper.class);
+    Car car2 = mapper2.selectById(3L);
+    System.out.println(car2);
+    sqlSession1.close();
+    sqlSession2.close();
+}
+```
+
+![image-20231114204632784](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231114204632784.png)
+
+
+
+什么时候不走缓存？
+
+- SqlSession对象不是同一个
+- 查询条件不同
+- 第一次DQL和第二次DQL之间做以下两个任意一件，都会让一级缓存清空
+  - 执行SqlSession的clearCache()方法，手动清空缓存
+  - 执行insert/delete/update语句
+
+
+
+## 12.2 二级缓存
+
+![image-20231114205603059](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231114205603059.png)
+
+![image-20231114205808245](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231114205808245.png)
+
+![image-20231114205819530](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231114205819530.png)
+
+```java
+@Test
+public void testSelectByIdSecondCache() throws Exception{
+    //如果要获取不同的SqlSession对象，不能用工具类
+    //SqlSession sqlSession = SqlSessionUtil.openSession();
+    SqlSessionFactory sqlSessionFactory = new SqlSessionFactoryBuilder().build(Resources.getResourceAsStream("mybatis-config.xml"));
+    SqlSession sqlSession1 = sqlSessionFactory.openSession();
+    SqlSession sqlSession2 = sqlSessionFactory.openSession();
+    CarMapper mapper1 = sqlSession1.getMapper(CarMapper.class);
+    Car car1 = mapper1.selectById(3L);  //这行代码执行后，实际上数据缓存到一级缓存中（sqlSession1一级缓存）
+    System.out.println(car1);
+    //sqlSession1如果不关闭，二级缓存中没有数据
+    CarMapper mapper2 = sqlSession2.getMapper(CarMapper.class);
+    Car car2 = mapper2.selectById(3L);  //这行代码执行后，实际上数据缓存到一级缓存中（sqlSession2一级缓存）
+    System.out.println(car2);
+    sqlSession1.close();   //执行到这，会将sqlSession1这个一级缓存中的数据写入到二级缓存中
+    sqlSession2.close();   //执行到这，会将sqlSession2这个一级缓存中的数据写入到二级缓存中
+}
+```
+
+![image-20231114210457343](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231114210457343.png)
+
+```java
+@Test
+public void testSelectByIdSecondCache() throws Exception{
+    //如果要获取不同的SqlSession对象，不能用工具类
+    //SqlSession sqlSession = SqlSessionUtil.openSession();
+    SqlSessionFactory sqlSessionFactory = new SqlSessionFactoryBuilder().build(Resources.getResourceAsStream("mybatis-config.xml"));
+    SqlSession sqlSession1 = sqlSessionFactory.openSession();
+    SqlSession sqlSession2 = sqlSessionFactory.openSession();
+    CarMapper mapper1 = sqlSession1.getMapper(CarMapper.class);
+    Car car1 = mapper1.selectById(3L);  //这行代码执行后，实际上数据缓存到一级缓存中（sqlSession1一级缓存）
+    System.out.println(car1);
+    sqlSession1.close();   //执行到这，会将sqlSession1这个一级缓存中的数据写入到二级缓存中
+    //sqlSession1如果不关闭，二级缓存中没有数据
+    CarMapper mapper2 = sqlSession2.getMapper(CarMapper.class);
+    Car car2 = mapper2.selectById(3L);  //这行代码执行后，实际上数据缓存到一级缓存中（sqlSession2一级缓存）
+    System.out.println(car2);
+
+    sqlSession2.close();   //执行到这，会将sqlSession2这个一级缓存中的数据写入到二级缓存中
+}
+```
+
+![image-20231114210657821](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231114210657821.png)
+
+
+
+二级缓存失效：只要两次查询之前出现增删改操作，就会失效
+
+![image-20231114210948729](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231114210948729.png)
+
+![image-20231114211141091](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231114211141091.png)
+
+## 12.3 mybatis集成EhCache
+
+![image-20231114211722585](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231114211722585.png)
+
+![image-20231114211815281](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231114211815281.png)
+
+
+
+![image-20231114211741247](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231114211741247.png)
+
+![image-20231114211838152](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231114211838152.png)
+
+![image-20231114211859602](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231114211859602.png)
+
+![image-20231114211912918](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231114211912918.png)
+
+
+
+
+
+# 13.mybatis逆向工程
+
+![image-20231114212312183](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\image-20231114212312183.png)

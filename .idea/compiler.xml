@@ -8,6 +8,7 @@
         <outputRelativeToContentRoot value="true" />
         <module name="junit-test" />
         <module name="mybatis-006-antic" />
+        <module name="mybatis-011-cache" />
         <module name="mybatis-009-dynamic-sql" />
         <module name="mybatis-007-param" />
         <module name="mybatis-008-select" />
